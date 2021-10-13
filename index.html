@@ -1,0 +1,274 @@
+<html>
+    <head>
+        <title>ToDoApp</title>
+        <style>
+            .container-login{
+                display:none;
+            }
+            .container-login a{
+                text-decoration: none;
+                color:blue;
+
+            }
+
+            body{
+                background-color: rgb(158, 249, 255);
+            }
+
+            .container-login{
+                background-color: white;
+                border-radius: 20px;
+                width: 100%;
+                text-align: center;
+            }
+
+            .container-login input{
+                width: 100%;
+                height: 40px;
+                display:block;
+                max-width: 500px;
+                margin: 10px auto;
+            }
+
+            .container-login textarea{
+                resize: none;
+                height: 100px;
+                width: 500px;
+                padding:10px;
+                font-size: 14px
+            }
+
+            .container-login h2{
+                font-size: 30px;
+                padding-top: 20px;
+            }
+
+            .container-login h3{font-size: 30px;}
+
+            .container-login input[type="submit"]{
+                background-color: blueviolet;
+                color: white;
+                border: none;
+                font-size: 15px;
+            }
+
+            .container-login .tarefas-usuario li{
+                padding:10px;
+                font-size: 20px;
+            }
+
+            .objeto{
+                display:flex;
+                justify-content: center;
+            }
+
+            .objeto .excluir-btn{
+                margin-top: 13px;
+                color:red;
+            }
+            .login{
+                background-color: white;
+                border-radius: 20px;
+                width: 100%;
+                text-align: center;
+            }
+
+            .login input{
+                width: 100%;
+                height: 40px;
+                display:block;
+                max-width: 500px;
+                margin: 10px auto;
+            }
+
+            .login h2{
+                font-size: 30px;
+                padding-top: 20px;
+            }
+
+            .login input[type="submit"]{
+                background-color: blueviolet;
+                color: white;
+                border: none;
+                font-size: 15px;
+            }
+
+    </style>
+    </head>
+    <body>
+        <div class="login">
+            <h2>Faca o login no App</h2>
+            <form class="login-form">
+                <input placeholder="Digite seu email..." type="email" name="email"/>
+                <input placeholder="Digite sua senha..." type="password" name="password"/>
+                <input type="submit" name="acao" value="Logar!"/>
+                <br>
+            </form>
+        </div>    
+
+        <div class="container-login">
+            <h2>Olá, você está logado! Para deslogar clique <a class="logout" href="javascript:void(0);">AQUI</a></h2>
+            <form class="form-cadastro-tarefa">
+                <textarea placeholder="Digite sua atividade..." name="tarefa"></textarea>
+                <input type="datetime-local" name="datetime"/>
+                <input type="submit" name="acao" value="Cadastrar tarefa"/>
+            </form>
+            <div class="tarefas-usuario">
+                <h3>Listagem de tarefas atuais!</h3>
+                <ul id="tarefas"></ul>
+            </div>
+        </div>
+
+
+
+        <script src="https://www.gstatic.com/firebasejs/8.4.3/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.4.0/firebase-auth.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.4.0/firebase-firestore.js"></script>
+
+        <script type="module">          
+            
+            // Iniciar Firebase
+
+            const firebaseConfig = {
+          
+              apiKey: "AIzaSyBYD6j2YWhzs1GgvFkpTSysK8i-7nSXwrI",
+              authDomain: "todolist-f89d4.firebaseapp.com",
+              projectId: "todolist-f89d4",       
+              messagingSenderId: "667423024557", 
+              appId: "1:667423024557:web:1584c381276e64c8b82d24",
+              measurementId: "G-85LXDBG2CE"
+          
+            };
+                    
+            firebase.initializeApp(firebaseConfig);
+          
+
+            var usuario = null;
+            var formLogin = document.querySelector("form.login-form");
+            var btnLogout = document.querySelector(".logout");
+
+            // LogIn do Usuario
+
+            formLogin.addEventListener("submit", (e)=>{
+                e.preventDefault()
+                let email = document.querySelector("[name=email]").value;
+                let password = document.querySelector("[name=password]").value;
+                firebase.auth().signInWithEmailAndPassword(email, password)
+                .then((userCredential) =>{
+                    usuario = userCredential.user;
+                    document.querySelector(".login").style.display="none";
+                    document.querySelector(".container-login").style.display="block";
+                    alert("logado com sucesso "+usuario.email);
+                    formLogin.reset()
+                })
+                .catch((error) =>{
+                    var errorCode = error.code;
+                    var errorMessage = error.message;
+                    alert(errorMessage)
+                })
+            })
+
+            // LogOut do Usuario
+
+            btnLogout.addEventListener("click", (e)=>{
+                e.preventDefault();
+                firebase.auth().signOut().then(()=>{
+                    usuario = null;
+                    document.querySelector(".login").style.display="block";
+                    document.querySelector(".container-login").style.display="none";
+                    alert("Deslogado")
+                }).catch((error)=>{
+                    var errorCode = error.code;
+                    var errorMessage = error.message;
+                    alert(errorMessage);
+                });
+            })
+
+            // Isso tudo roda automatico quando o servidor plotar, deixa a permanencia do login, por exemplo
+            
+            var formCadastro = document.querySelector(".form-cadastro-tarefa");
+            const db = firebase.firestore();
+
+            firebase.auth().onAuthStateChanged((val)=>{
+                if(val){
+                    usuario = val;
+                    document.querySelector(".login").style.display="none"
+                    document.querySelector(".container-login").style.display="block"
+
+
+                    // Ouvir mudancas no banco de dados
+                    db.collection("tarefas").where("userId","!=",usuario.uid).onSnapshot((data)=>{
+                        let list = document.querySelector("#tarefas");
+                        list.innerHTML = "";
+                        let tarefas = data.docs;
+                        tarefas = tarefas.sort(function(a,b){
+                            if (a.data().horario < b.data().horario)
+                                return -1;
+                            else
+                                return +1;
+                            
+                        })
+                        tarefas.map((val)=>{
+                            list.innerHTML+=`
+                            <div class="objeto">
+
+                                <li style="list-style:none;">${val.data().tarefa} </li>
+                                <a tarefa-id="${val.id}" class="excluir-btn" href="javacript:void(0)">(X)</a>
+
+                            </div>`
+                        })
+
+                        // Excluir apos clicar no X da interface
+
+                        var excluirTarefas = document.querySelectorAll(".excluir-btn");
+                        excluirTarefas.forEach(element =>{
+                            element.addEventListener("click", function(e){
+                            e.preventDefault();
+                            let docID = element.getAttribute("tarefa-id");
+                            db.collection("tarefas").doc(docID).delete();
+                            })
+                        })
+                    })
+                }
+            });
+
+
+
+
+
+            // Colocando as informacoes dentro do Firebase
+
+            formCadastro.addEventListener("submit", (e)=>{
+                e.preventDefault();
+
+                let tarefa = document.querySelector(".form-cadastro-tarefa [name=tarefa]").value;
+                let dateTime = document.querySelector(".form-cadastro-tarefa [name=datetime]").value;
+
+                let dataAtual = new Date().getTime();
+                
+                if (dataAtual > new Date(dateTime).getTime()){
+                    alert("Voce informou uma data invalida!")
+                    formCadastro.reset();
+                }else if(tarefa == "" || dateTime == ""){
+                    alert("Digite os campos para a insercao!")
+                }else{
+                    // Inserir e criar colecao caso nao exista!
+                    db.collection("tarefas").add({
+                        tarefa: tarefa,
+                        horario: new Date(dateTime).getTime(),
+                        userID: usuario.uid
+                    })
+                    formCadastro.reset();
+                    alert("Sua tarefa foi cadastrada com sucesso!")
+                }
+                
+            })
+
+
+
+
+          </script>
+    </body>
+
+
+</html>

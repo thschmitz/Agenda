@@ -197,7 +197,7 @@
 
 
                     // Ouvir mudancas no banco de dados
-                    db.collection("tarefas").where("userId","!=",usuario.uid).onSnapshot((data)=>{
+                    db.collection("tarefas").where("horario","!=",null).onSnapshot((data)=>{
                         let list = document.querySelector("#tarefas");
                         list.innerHTML = "";
                         let tarefas = data.docs;
@@ -211,10 +211,8 @@
                         tarefas.map((val)=>{
                             list.innerHTML+=`
                             <div class="objeto">
-
                                 <li style="list-style:none;">${val.data().tarefa} </li>
                                 <a tarefa-id="${val.id}" class="excluir-btn" href="javacript:void(0)">(X)</a>
-
                             </div>`
                         })
 
